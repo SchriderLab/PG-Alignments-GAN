@@ -36,4 +36,4 @@ ODIR="${2}${NUM_IN}-nIn_${CRITIC_ITER}-cIter_${BATCH_SIZE}-bSize_-gplambda_${GP_
 #    INPUT_NOISE="--input_noise"
 #fi
 
-python3 src/train_wgan_v2.py --odir $ODIR --idir $IDIR --save_freq $SAVE_FREQ --num_in $NUM_IN --critic_iter $CRITIC_ITER --batch_size $BATCH_SIZE --gen_lr $LEARN_RATE --disc_lr $LEARN_RATE --gp_lambda $GP_LAMBDA --use_cuda --plot --shuffle_inds
+python3 src/train_wgan_v2.py --odir $ODIR --idir $IDIR --save_freq $SAVE_FREQ --num_in $NUM_IN --critic_iter $CRITIC_ITER --batch_size $BATCH_SIZE --gen_lr $LEARN_RATE --disc_lr $LEARN_RATE --gp_lambda $GP_LAMBDA --use_cuda --plot
