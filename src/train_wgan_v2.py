@@ -373,10 +373,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # gen params
-    parser.add_argument("--latent_size", default="128", help="size of noise input")
+    parser.add_argument("--latent_size", default="128", help="size of latent/noise vector")
     
     # IO
-    parser.add_argument("--idir", default="ms_sims/64ind_6sites_5.16e-04theta_10krep_pos/")
+    parser.add_argument("--idir", default="ms_sims/64ind_6sites_5.16e-04theta_10krep_pos/", help="input directory")
     parser.add_argument("--odir", default="output/", help="output directory")
     parser.add_argument("--plot", action="store_true", help="plot summaries in output")
     
@@ -384,11 +384,11 @@ def parse_args():
     parser.add_argument("--gen", default="sigGen", help="set what type of generator to be used. Options: sigGen tanGen tanNorm")
     
     # training paramaters
-    parser.add_argument("--loss", default = "gp")
+    parser.add_argument("--loss", default = "gp", help="whether to use gp or div to make the loss 1-Lipschitz compatible")
     parser.add_argument("--gen_lr", default="0.00005", help="generator learning rate")
     parser.add_argument("--disc_lr", default="0.00005", help="discriminator learning rate")
     parser.add_argument("--num_in", default="10000", help="number of input alignments")
-    parser.add_argument("--use_cuda", action="store_true")
+    parser.add_argument("--use_cuda", action="store_true", help="use cuda?")
     parser.add_argument("--save_freq", default="0", help="save model every save_freq epochs") # zero means don't save
     parser.add_argument("--batch_size", default="64", help="set batch size")
     parser.add_argument("--epochs", default="10000", help="total number of epochs")
@@ -409,16 +409,9 @@ def parse_args():
     parser.add_argument("--normalize", action = "store_true", help = "normalize inputs for tanh activation")
     parser.add_argument("--shuffle_inds", action = "store_true", help = "shuffle individuals in each input alignment")
     
-    parser.add_argument("--plot_dir", default = "ims")
     parser.add_argument("--verbose", action="store_true", help="verbose output to log")
     args = parser.parse_args()
-    
-    if args.plot_dir != "None":
-        if not os.path.exists(args.plot_dir):
-            os.mkdir(args.plot_dir)
-            logging.debug('root: made output directory {0}'.format(args.plot_dir))
-        else:
-            os.system('rm -rf {0}'.format(os.path.join(args.plot_dir, '*')))
+
 
 
     if args.verbose:
