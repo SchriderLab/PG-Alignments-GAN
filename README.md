@@ -79,6 +79,8 @@ Another way to evaluate the GAN is to calculate the Adversarial Accuracy. This m
 <img src="https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_aa.png" alt="example AA" width="500"/>
 </p>
 
+Additional ways to evaluate include investigating the output of the GAN in more detail and looking at metrics relevant to population genetics, such as the SFS. Enabling plotting (--plot) will automatically generate these (and the above 2DSWD and AA plots) in your output directory. 
+
 ## References
 
 Yelmen, Burak, et al. "Creating artificial human genomes using generative neural networks." PLoS genetics 17.2 (2021): e1009303.
