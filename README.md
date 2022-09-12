@@ -60,5 +60,18 @@ Optional arguments:
   --shuffle_inds        shuffle individuals in each input alignment
   --verbose             verbose output to log
   ```
+## Output
 
+Below are some example input and generated alignments, evaluated at the point where the 2D Sliced Wasserstein Distance (2DSWD, see Evaluation) between input and generated alignments is minimized 
 ![GAN Example images](https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/Alignments_fig-01.png)
+
+## Evaluation
+
+The GAN can be evaluated in a number of ways. One way we did so is to calculate the 2D Sliced Wasserstein Distance, as calculated from the site-frequency-spectrum (SFS), between the input and generated alignments. This measurement is essentially the difference between the input and generated data distributions in multidimensional space. This measurement is calculated at every save frequency (SAVE_FREQ) and an example is shown below. Here, the minimum is reached relatively soon and is stably maintained. In other examples where the GAN struggles this line may be more erratic or increase after reaching a minimum. 
+
+![2DSWD Example](https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_2dswd.png)
+
+Another way to evaluate the GAN is to calculate the Adversarial Accuracy. This measurement is used to determine the level of overfitting or underfitting of the network, where an ideal value of all AA values is 0.5. Essentially this measurement looks at how how often the nearest neighbor alignment to a generated or input alignment is another generated (AAsynth) or input alignment (AAtruth) , respectively, in some multidimensional space. For a perfectly fit model, generated alignments would be next to other generated alignments 50% of the time and similarly for input alignments, resulting in an AAts score of 0.5. For more information see Yelmen et al. (2021). Below, AAts is above 0.5 indicating the model is underfitting, but it is closely tracking with the AAtruth and AAsynth values, meaning the underfitting isn't from the model focusing on some smaller part of the input alignment distribution.
+
+![AA Example](https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_aa.png)
+
