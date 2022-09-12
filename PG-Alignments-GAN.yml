@@ -1,4 +1,4 @@
-name: PG-Alignments-GAN
+name: PGA-GAN
 channels:
   - pytorch
   - nvidia
