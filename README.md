@@ -60,6 +60,22 @@ Optional arguments:
   --shuffle_inds        shuffle individuals in each input alignment
   --verbose             verbose output to log
   ```
+ ## Input
+ 
+Input into the GAN can be simluated on the fly using SimulatorGenerator as the data loader or DataGeneratorDisk to load in simulated alignments in a folder of csv files. SimulatorGenerator works with simplistic models and can be edited in the train_wgan_v2.py script to use different models, but for more complex models and those using discoal or stdpopsim it is probably easiest to simulate the data prior to training. After simulating, the output can be piped to either the convert_ms.py script if using a fixed number of sites, or the convert_relative.py script if data are simulated under a model with variable number of sites. The latter will choose the 64 sites surrounding your desired location on the chromosome and normalize the positions from 0 to 1. As an example you can pipe the output of your simulation directly:
+
+```
+ms 64 20000 -s 64 | python convert_ms.py outdir
+```
+
+or presave your sims to a text file and do:
+
+```
+cat sim.txt | python convert_ms.py outdir
+```
+
+The outdir here is what will be used as the input directory for training
+  
 ## Output
 
 Below are some example input and generated alignments, evaluated at the point where the 2D Sliced Wasserstein Distance (2DSWD, see Evaluation) between input and generated alignments is minimized 
