@@ -1,4 +1,4 @@
-name: torchLearn
+name: PG-Alignments-GAN
 channels:
   - pytorch
   - nvidia
@@ -142,4 +142,3 @@ dependencies:
     - pot==0.7.0
     - prettytable==3.0.0
     - wcwidth==0.2.5
-prefix: /nas/longleaf/home/wwbooker/miniconda3/envs/torchLearn
