@@ -1,5 +1,5 @@
 # PG-Alignments-GAN
-This repository contains scripts, configuration files, and examples for a Generative Adversarial Network (GAN) of Population Genetic Alignments
+This repository contains scripts, configuration files, and examples for a Generative Adversarial Network (GAN) of Population Genetic Alignments. This paper associated with this work can be found here: PAPER
 
 ## Overview
 The scripts here function to train and evaluate a GAN that learns the distribution of and mimicks population genetic alignments. Within layers.py there are several generator and discriminator architectures you can use, but the best performing is a Deep-Convolutional GAN using a Wasserstein loss with gradient penalty (DCWGAN-GP). Full details of the architecture are depicted below.
@@ -69,9 +69,16 @@ Below are some example input and generated alignments, evaluated at the point wh
 
 The GAN can be evaluated in a number of ways. One way we did so is to calculate the 2D Sliced Wasserstein Distance, as calculated from the site-frequency-spectrum (SFS), between the input and generated alignments. This measurement is essentially the difference between the input and generated data distributions in multidimensional space. This measurement is calculated at every save frequency (SAVE_FREQ) and an example is shown below. Here, the minimum is reached relatively soon and is stably maintained. In other examples where the GAN struggles this line may be more erratic or increase after reaching a minimum. 
 
-![2DSWD Example](https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_2dswd.png)
+<p align="center">
+<img src="https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_2dswd.png" alt="example 2dswd" width="500" align="center"/>
+</p>
 
 Another way to evaluate the GAN is to calculate the Adversarial Accuracy. This measurement is used to determine the level of overfitting or underfitting of the network, where an ideal value of all AA values is 0.5. Essentially this measurement looks at how how often the nearest neighbor alignment to a generated or input alignment is another generated (AAsynth) or input alignment (AAtruth) , respectively, in some multidimensional space. For a perfectly fit model, generated alignments would be next to other generated alignments 50% of the time and similarly for input alignments, resulting in an AAts score of 0.5. For more information see Yelmen et al. (2021). Below, AAts is above 0.5 indicating the model is underfitting, but it is closely tracking with the AAtruth and AAsynth values, meaning the underfitting isn't from the model focusing on some smaller part of the input alignment distribution.
 
-![AA Example](https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_aa.png)
+<p align="center">
+<img src="https://github.com/SchriderLab/PG-Alignments-GAN/blob/main/img/example_aa.png" alt="example AA" width="500"/>
+</p>
 
+## References
+
+Yelmen, Burak, et al. "Creating artificial human genomes using generative neural networks." PLoS genetics 17.2 (2021): e1009303.
