@@ -6,7 +6,8 @@ import pandas as pd
 import os
 import random
 
-####### usage: cat <msfile> | python convert_discoal.py outdir #######
+####### usage: cat <msfile> | python convert_discoal.py outdir ######
+####### converts output from ms or discoal or some other simulator that selects nsites surrounding a chosen position #######
 
 def split_sites(word):
     return [int(char) for char in word]
@@ -17,7 +18,6 @@ nsam = 64  ####### number of individuals in each rep
 nsites = 64
 sel_pos = 0.5
 outdir = sys.argv[1]
-relative = False
 run_convert = 0
 skip_sim = True
 
@@ -69,8 +69,6 @@ for line in sys.stdin:
                     positions = np.append(positions,pos[end_site])
                 positions = norm_0_1(positions)
                 positions = np.array(positions[1:len(positions)-1])
-                if relative:
-                    positions[1:] -= positions[:-1]
                 positions = pd.DataFrame(positions)
                 positions.to_csv(outdir+str(nrep)+'_pos.csv',header=False,index=False)
             continue
