@@ -704,6 +704,9 @@ def main():
                     logging.debug('root: made output directory {0}'.format(i))
                 else:
                     os.system('rm -rf {0}'.format(os.path.join(odir, str(i) + '/*')))
+                
+                aa_truth_array = []
+                aa_synth_array = []
 
                 rand_1000 = np.random.choice(range(max_gen_size),1000, replace = False) ## keeps sites and pos together for any plotting that requires both
                 
@@ -723,7 +726,10 @@ def main():
                 if i > 1:
                     plot_w_dist_pca(w_dists_pca,epochs_vec,i,odir)
                 
-                sfs_1k_real, sfs_1k_gen = plot_sfs_avg_bar(fake_sites_plotting[:1000,:,:,:], i, in_plot_data_sites[np.random.choice(range(in_plot_data_sites.shape[0]),1000, replace = False),:,:,:], odir, return_sfs=True)
+                sfs_1k_real, sfs_1k_gen, aa_truth, aa_synth = plot_sfs_avg_bar(fake_sites_plotting[:1000,:,:,:], i, in_plot_data_sites[np.random.choice(range(in_plot_data_sites.shape[0]),1000, replace = False),:,:,:], odir, return_sfs=True)
+                aa_truth_array.append(aa_truth)
+                aa_synth_array.append(aa_synth)
+                plot_aa(epochs_vec,aa_truth_array,aa_synth_array,odir)
                 make_stairway_blueprint(sfs_1k_gen, sfs_1k_real, i, odir)
                 make_stairway_blueprint_OoA2pop(fake_sites_plotting[:1000,:,:,:], in_plot_data_sites[np.random.choice(range(in_plot_data_sites.shape[0]),1000, replace = False),:,:,:], i, odir)
                 plot_subpop_joint_sfs(fake_sites_plotting[:1000,:,:,:], i, in_plot_data_sites[np.random.choice(range(in_plot_data_sites.shape[0]),1000, replace = False),:,:,:], data_size, 32, 32, odir, device)

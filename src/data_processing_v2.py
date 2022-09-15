@@ -190,6 +190,29 @@ def plot_w_dist_pca(w_dists_pca,epochs_vec,i,odir):
 
     plt.close()
 
+def plot_aa(epochs_vec,aa_truth,aa_synth,odir):
+
+    aa_ts = aa_truth + aa_synth / 2
+    plt.rcParams.update({'font.size': 18})
+
+    fig, ax = plt.subplots()
+
+    plt.plot(epochs_vec, aa_truth, label='AA_truth', color = '#440154FF')
+    plt.plot(epochs_vec, aa_synth, label='AA_synth', color = '#FDE725FF')
+    plt.plot(epochs_vec, aa_ts, label='AA_ts', color = '#404788FF')
+
+
+    #plt.title("Adversarial Accuracy")
+    plt.legend()
+    plt.ylim([0,1])
+    fig.set_size_inches(10, 10)
+    plt.savefig(os.path.join(odir,'adversarial_accuracy.png'), format='png')
+    plt.savefig(os.path.join(odir,'adversarial_accuracy.svg'), format='svg')
+    plt.close(fig)
+    dt = pd.DataFrame(np.array([epochs_vec,aa_truth,aa_synth,aa_ts]).transpose(),columns=['epoch','aa_truth','aa_synth','aa_ts'])
+    dt.to_csv(os.path.join(odir,'adversarial_accuracy.csv'), header=True, index=False)
+    plt.close()
+
 
 def plot_sfs_ind(generator, curr_epoch, num_sfs, latent_size, data_size, odir, device, normalize):
     plt.rcParams.update({'font.size': 18})
@@ -377,9 +400,10 @@ def plot_sfs_avg_bar(fake_sites, curr_epoch, in_dat, odir, return_sfs=True):
     plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + '_sfs1k_bar.png'), format='png')
     plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + '_sfs1k_bar.svg'), format='svg')
     plt.close(fig)
+    aa_truth, aa_synth = calc_aa_scores(sfs_array_real, sfs_array_fake)
 
     if return_sfs:
-        return sfs_real[1:-1], sfs_gen[1:-1]
+        return sfs_real[1:-1], sfs_gen[1:-1], aa_truth, aa_synth
 
 def plot_sfs_subpop_avg(generator, curr_epoch, in_dat, latent_size, data_size, sub_1_size, sub_2_size, odir, device, normalize):
     plt.rcParams.update({'font.size': 18})

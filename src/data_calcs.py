@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import squareform, cdist
 import allel
+from nn_adversarial_accuracy import *
 
 def add_singletons(generated_sites):
     """
@@ -303,3 +304,36 @@ def compute_fst(alignment):
     num, den = allel.hudson_fst(pop_1_ac, pop_2_ac)
     fst = np.sum(num) / np.sum(den)
     return fst
+
+def calc_aa_scores(in_sfs, gen_sfs):
+    """
+    calculates nearest neighbor adversarial accuracy for input and generated examples
+
+    Parameters
+    ----------
+    in_sfs: array_like, int
+        site frequency spectrum of input alignments
+
+    gen_sfs: array_like, int
+        site frequency spectrum of generated alignments
+
+    Returns
+    ----------
+    aa_truth: float
+        adversarial accuracy for input indexed
+
+    aa_synth: float
+        adversarial accuracy for generated indexed
+
+    """
+
+    nn_t = NearestNeighbors(n_neighbors=1).fit(np.asarray(in_sfs))
+    nn_s = NearestNeighbors(n_neighbors=1).fit(np.asarray(gen_sfs))
+    nn_t_t = nn_t.kneighbors()[0]
+    nn_s_s = nn_s.kneighbors()[0]
+    nn_t_s = nn_t.kneighbors(np.asarray(g_sfs))[0]
+    nn_s_t = nn_s.kneighbors(np.asarray(gen_sfs))[0]
+    aa_truth = np.mean(nn_t_s > nn_t_t)
+    aa_synth = np.mean(nn_s_t > nn_s_s)
+
+    return aa_truth, aa_synth
