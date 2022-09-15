@@ -1,4 +1,4 @@
-'''Compute the nearest neighbor adversarial accuracy, copied from github.com/yknot/ESANN2019'''
+'''Compute the nearest neighbor adversarial accuracy, copied from github.com/yknot/ESANN2019 https://hal.inria.fr/hal-02160496'''
 import os
 import sys
 from itertools import product
