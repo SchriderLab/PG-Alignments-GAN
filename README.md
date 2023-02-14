@@ -1,5 +1,5 @@
 # PG-Alignments-GAN
-This repository contains scripts, configuration files, and examples for a Generative Adversarial Network (GAN) of Population Genetic Alignments. This paper associated with this work can be found here: PAPER
+This repository contains scripts, configuration files, and examples for a Generative Adversarial Network (GAN) of Population Genetic Alignments. This paper associated with this work can be found here: https://www.biorxiv.org/content/10.1101/2022.09.17.508145v1
 
 ## Overview
 The scripts here function to train and evaluate a GAN that learns the distribution of and mimicks population genetic alignments. Within layers.py there are several generator and discriminator architectures you can use, but the best performing is a Deep-Convolutional GAN using a Wasserstein loss with gradient penalty (DCWGAN-GP). Full details of the architecture are depicted below.
@@ -65,13 +65,13 @@ Optional arguments:
 Input into the GAN can be simluated on the fly using SimulatorGenerator as the data loader or DataGeneratorDisk to load in simulated alignments in a folder of csv files. SimulatorGenerator works with simplistic models and can be edited in the train_wgan_v2.py script to use different models, but for more complex models and those using discoal or stdpopsim it is probably easiest to simulate the data prior to training. After simulating, the output can be piped to either the convert_ms.py script if using a fixed number of sites, or the convert_relative.py script if data are simulated under a model with variable number of sites. The latter will choose the 64 sites surrounding your desired location on the chromosome and normalize the positions from 0 to 1. As an example you can pipe the output of your simulation directly:
 
 ```
-ms 64 20000 -s 64 | python convert_ms.py outdir
+ms 64 20000 -s 64 | python convert_ms.py outdir/
 ```
 
 or presave your sims to a text file and do:
 
 ```
-cat sim.txt | python convert_ms.py outdir
+cat sim.txt | python convert_ms.py outdir/
 ```
 
 The outdir here is what will be used as the input directory for training
