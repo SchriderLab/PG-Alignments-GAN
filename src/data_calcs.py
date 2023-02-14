@@ -331,9 +331,11 @@ def calc_aa_scores(in_sfs, gen_sfs):
     nn_s = NearestNeighbors(n_neighbors=1).fit(np.asarray(gen_sfs))
     nn_t_t = nn_t.kneighbors()[0]
     nn_s_s = nn_s.kneighbors()[0]
-    nn_t_s = nn_t.kneighbors(np.asarray(g_sfs))[0]
+    nn_t_s = nn_t.kneighbors(np.asarray(gen_sfs))[0]
     nn_s_t = nn_s.kneighbors(np.asarray(gen_sfs))[0]
     aa_truth = np.mean(nn_t_s > nn_t_t)
     aa_synth = np.mean(nn_s_t > nn_s_s)
+    aa_ts = (aa_truth + aa_synth) / 2
 
-    return aa_truth, aa_synth
+
+    return aa_truth, aa_synth, aa_ts

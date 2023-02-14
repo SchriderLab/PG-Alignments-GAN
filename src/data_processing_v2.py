@@ -47,63 +47,6 @@ def plot_losses(odir, losses, curr_epoch):
     plt.close(fig)
 
 
-# plots and records pca comparing real and generated sequences
-def plot_pca(df, curr_epoch, generated_genomes_df, odir, model_type="normal", labels=None, pop_dict=None, projection="2d"):
-    plt.rcParams.update({'font.size': 18})
-
-    # copy original data
-    df_temp = df.copy()
-
-    # set up data labels for plotting
-    if model_type == "conditional":
-        pop_labels = list(pop_dict.keys())
-        pops = ["Real_" + x for x in pop_labels]
-        pops.extend(["AG_" + x for x in pop_labels])
-        df_temp["label"] = labels.map(lambda x: "Real_" + x)
-        generated_genomes_df['label'] = generated_genomes_df.loc[:, "label"].map(lambda x: "AG_" + x)
-    else:
-        df_temp["label"] = "Real"
-        pops = ['Real', 'AG']
-
-    # append Real and AG data
-    df_all_pca = pd.concat([df_temp, generated_genomes_df])
-
-    # calculate principal components and collect labels
-    n_components = int(projection[0])
-    pca = PCA(n_components=n_components)
-    labels = df_all_pca.pop("label").to_list()
-    PCs = pca.fit_transform(df_all_pca)
-
-    fig = plt.figure(figsize=(10, 10))
-
-    if projection == "2d":
-        PCs_df = pd.DataFrame(data=PCs, columns=['PC1', 'PC2'])
-        ax = fig.add_subplot(1, 1, 1)
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-    else:
-        PCs_df = pd.DataFrame(data=PCs, columns=["PC1", "PC2", "PC3"])
-        ax = plt.axes(projection="3d")
-
-    PCs_df['Pop'] = labels
-
-    # plot data
-    for pop in pops:
-        ix = PCs_df['Pop'] == pop
-        if projection == "2d":
-            ax.scatter(PCs_df.loc[ix, 'PC1']
-                       , PCs_df.loc[ix, 'PC2']
-                       , s=50, alpha=0.2)
-        else:
-            ax.scatter3D(PCs_df.loc[ix, 'PC1'], PCs_df.loc[ix, 'PC2'], PCs_df.loc[ix, 'PC3'], s=50, alpha=0.2)
-
-    ax.legend(pops)
-    fig.set_size_inches(10, 10)
-    fig.set_dpi(500)
-    fig.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + '_pca.pdf'), format='pdf')
-    plt.cla()
-    plt.close(fig)
-
 def plot_sfs_pca(fake_sites, curr_epoch, in_dat, data_size, odir, device):
     plt.rcParams.update({'font.size': 18})
    
@@ -190,9 +133,8 @@ def plot_w_dist_pca(w_dists_pca,epochs_vec,i,odir):
 
     plt.close()
 
-def plot_aa(epochs_vec,aa_truth,aa_synth,odir):
+def plot_aa(epochs_vec,aa_truth,aa_synth,aa_ts,odir):
 
-    aa_ts = aa_truth + aa_synth / 2
     plt.rcParams.update({'font.size': 18})
 
     fig, ax = plt.subplots()
@@ -400,10 +342,10 @@ def plot_sfs_avg_bar(fake_sites, curr_epoch, in_dat, odir, return_sfs=True):
     plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + '_sfs1k_bar.png'), format='png')
     plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + '_sfs1k_bar.svg'), format='svg')
     plt.close(fig)
-    aa_truth, aa_synth = calc_aa_scores(sfs_array_real, sfs_array_fake)
+    aa_truth, aa_synth, aa_ts = calc_aa_scores(sfs_real[1:-1], sfs_gen[1:-1])
 
     if return_sfs:
-        return sfs_real[1:-1], sfs_gen[1:-1], aa_truth, aa_synth
+        return sfs_real[1:-1], sfs_gen[1:-1], aa_truth, aa_synth, aa_ts
 
 def plot_sfs_subpop_avg(generator, curr_epoch, in_dat, latent_size, data_size, sub_1_size, sub_2_size, odir, device, normalize):
     plt.rcParams.update({'font.size': 18})
@@ -673,11 +615,17 @@ def plot_ld(fake_sites, fake_pos, curr_epoch, in_sites, in_pos, data_size, odir,
 
     ### Calc LD decay
     for i in range(fake_sites.shape[0]):
-        generated_ld_array.append(calc_binned_ld_mean(fake_sites[i], fake_pos_sorted[i], 0, 10000, 500))
-        input_ld_array.append(calc_binned_ld_mean(input_sites[i], input_pos_sorted[i], 0, 10000, 500))
-        #rand_pos = np.random.random(64) * 10000
-        #rand_pos.sort()
-        #random_input_ld_array.append(calc_binned_ld_mean(input_sites[i], rand_pos, 0, 10000, 500))
+        fake_sites_tmp = fake_sites[i,:,:]
+        fake_pos_tmp = fake_pos_sorted[i,0,:]
+        pos_to_del = []
+        for pos in range(fake_sites.shape[1]):
+            if min(fake_sites_tmp[:,pos]) == max(fake_sites_tmp[:,pos]):
+                pos_to_del.append(pos)
+        fake_sites_tmp = np.delete(fake_sites_tmp,pos_to_del,1)
+        fake_pos_tmp = np.delete(fake_pos_tmp,pos_to_del,0)
+
+        generated_ld_array.append(calc_binned_ld_mean(fake_sites_tmp, fake_pos_tmp, 0, 10000, 1000))
+        input_ld_array.append(calc_binned_ld_mean(input_sites[i], input_pos_sorted[i], 0, 10000, 1000))
 
     generated_ld_mean = np.mean(generated_ld_array,0)
     generated_ld_stdev = np.std(generated_ld_array,0)
@@ -807,22 +755,30 @@ def plot_sumstats_dist(fake_sites, fake_pos, in_sites, in_pos, curr_epoch, odir)
     in_fst = []
 
     for aln in range(fake_sites.shape[0]):
-            fake_ac = allel.HaplotypeArray(fake_sites[aln,:,:].astype(int)).count_alleles()
-            in_ac = allel.HaplotypeArray(input_sites[aln,:,:].astype(int)).count_alleles()
+        fake_sites_tmp = fake_sites[aln,:,:]
+        fake_pos_tmp = fake_pos_sorted[aln,0,:]
+        pos_to_del = []
+        for pos in range(fake_sites.shape[1]):
+            if min(fake_sites_tmp[:,pos]) == max(fake_sites_tmp[:,pos]):
+                pos_to_del.append(pos)
 
-            fake_pi.append(allel.sequence_diversity(fake_pos_sorted[aln,0,:].astype(int), fake_ac, start=1, stop=10001))
-            fake_tajD.append(allel.tajima_d(fake_ac, fake_pos_sorted[aln,0,:].astype(int), start=1, stop=10001))
-            fake_omega.append(calc_omega(fake_sites[aln,:,:].astype(int)))
-            fake_fst.append(compute_fst(fake_sites[aln,:,:].astype(int)))
+        fake_sites_tmp = np.delete(fake_sites_tmp,pos_to_del,1)
+        fake_pos_tmp = np.delete(fake_pos_tmp,pos_to_del,0)
 
-            in_pi.append(allel.sequence_diversity(input_pos_sorted[aln,0,:].astype(int), in_ac, start=1, stop=10001))
-            in_tajD.append(allel.tajima_d(in_ac, input_pos_sorted[aln,0,:].astype(int), start=1, stop=10001))
-            in_omega.append(calc_omega(input_sites[aln,:,:].astype(int)))
-            in_fst.append(compute_fst(input_sites[aln,:,:].astype(int)))
+        fake_ac = allel.HaplotypeArray(np.transpose(fake_sites_tmp[:,:]).astype(int)).count_alleles()
+        in_ac = allel.HaplotypeArray(np.transpose(input_sites[aln,:,:]).astype(int)).count_alleles()
+
+        fake_pi.append(allel.sequence_diversity(fake_pos_tmp.astype(int), fake_ac, start=1, stop=10001))
+        fake_tajD.append(allel.tajima_d(fake_ac, fake_pos_tmp.astype(int), start=1, stop=10001))
+        fake_omega.append(calc_omega(fake_sites_tmp[:,:].astype(int)))
+        fake_fst.append(compute_fst(fake_sites[aln,:,:].astype(int)))
+
+        in_pi.append(allel.sequence_diversity(input_pos_sorted[aln,0,:].astype(int), in_ac, start=1, stop=10001))
+        in_tajD.append(allel.tajima_d(in_ac, input_pos_sorted[aln,0,:].astype(int), start=1, stop=10001))
+        in_omega.append(calc_omega(input_sites[aln,:,:].astype(int)))
+        in_fst.append(compute_fst(input_sites[aln,:,:].astype(int)))
 
     fig, ax1 = plt.subplots()
-    #ax1.set_title("Sequence Diversity Distribution")
-    #ax1.set_xlabel(r"Nucleotide Diversity ($\pi$)")
     ax1.set_title("Omega Distribution")
     ax1.set_xlabel(r"Kim and Nielsen's $\omega$")
     ax1.set_ylabel("Density")
@@ -906,14 +862,18 @@ def plot_windowed_stats(fake_sites, fake_pos, in_sites, in_pos, curr_epoch, odir
 
 
     for aln in range(fake_sites.shape[0]):
-        fake_pi, fake_windows_pi, fake_n_bases_pi, fake_counts_pi = allel.windowed_diversity(fake_pos_sorted[aln,0,:], fake_sites[aln,0,:,:].astype(int), size=500, start=1, stop=10001,step=500)
-        fake_theta, fake_windows_theta, fake_n_bases_theta, fake_counts_theta = allel.windowed_watterson_theta(fake_pos_sorted[aln,0,:], fake_sites[aln,0,:,:].astype(int), size=500, start=1, stop=10001,step=500)
-        fake_tajD, fake_windows_tajD, fake_counts_tajD = allel.windowed_tajima_d(fake_pos_sorted[aln,0,:], fake_sites[aln,0,:,:].astype(int), size=500, start=1, stop=10001,step=500)
+
+        fake_ac = allel.HaplotypeArray(np.transpose(fake_sites[aln,0,:,:]).astype(int)).count_alleles()
+        in_ac = allel.HaplotypeArray(np.transpose(input_sites[aln,:,:]).astype(int)).count_alleles()
+
+        fake_pi, fake_windows_pi, fake_n_bases_pi, fake_counts_pi = allel.windowed_diversity(fake_pos_sorted[aln,0,:], fake_ac, size=500, start=1, stop=10001,step=500)
+        fake_theta, fake_windows_theta, fake_n_bases_theta, fake_counts_theta = allel.windowed_watterson_theta(fake_pos_sorted[aln,0,:], fake_ac, size=500, start=1, stop=10001,step=500)
+        fake_tajD, fake_windows_tajD, fake_counts_tajD = allel.windowed_tajima_d(fake_pos_sorted[aln,0,:], fake_ac, size=500, start=1, stop=10001,step=500)
         fake_omega, fake_windows_omega, fake_counts_omega = calc_windowed_omega(fake_sites[aln,0,:,:].astype(int), fake_pos_sorted[aln,0,:], 3000, start=1, stop=10001, step=1000)
 
-        in_pi, in_windows_pi, in_n_bases_pi, in_counts_pi = allel.windowed_diversity(input_pos_sorted[aln,0,:], input_sites[aln,:,:].astype(int), size=500, start=1, stop=10001,step=500)
-        in_theta, in_windows_theta, in_n_bases_theta, in_counts_theta = allel.windowed_watterson_theta(input_pos_sorted[aln,0,:].astype(int), input_sites[aln,:,:], size=500, start=1, stop=10001,step=500)
-        in_tajD, in_windows_tajD, in_counts_tajD = allel.windowed_tajima_d(input_pos_sorted[aln,0,:], input_sites[aln,:,:].astype(int), size=500, start=1, stop=10001,step=500)
+        in_pi, in_windows_pi, in_n_bases_pi, in_counts_pi = allel.windowed_diversity(input_pos_sorted[aln,0,:], in_ac, size=500, start=1, stop=10001,step=500)
+        in_theta, in_windows_theta, in_n_bases_theta, in_counts_theta = allel.windowed_watterson_theta(input_pos_sorted[aln,0,:].astype(int), in_ac, size=500, start=1, stop=10001,step=500)
+        in_tajD, in_windows_tajD, in_counts_tajD = allel.windowed_tajima_d(input_pos_sorted[aln,0,:], in_ac, size=500, start=1, stop=10001,step=500)
         in_omega, in_windows_omega, in_counts_omega = calc_windowed_omega(input_sites[aln,:,:], input_pos_sorted[aln,0,:], 3000, start=1, stop=10001, step=1000)
         
         fake_pi_array.append(fake_pi)
@@ -1016,13 +976,22 @@ def plot_windowed_stats_paneled(fake_sites, fake_pos, in_sites, in_pos, curr_epo
 
     for aln in range(fake_sites.shape[0]):
 
-        fake_ac = allel.HaplotypeArray(fake_sites[aln,:,:].astype(int)).count_alleles()
-        in_ac = allel.HaplotypeArray(input_sites[aln,:,:].astype(int)).count_alleles()
+        fake_sites_tmp = fake_sites[aln,:,:]
+        fake_pos_tmp = fake_pos_sorted[aln,0,:]
+        pos_to_del = []
+        for pos in range(fake_sites.shape[1]):
+            if min(fake_sites_tmp[:,pos]) == max(fake_sites_tmp[:,pos]):
+                pos_to_del.append(pos)
+        fake_sites_tmp = np.delete(fake_sites_tmp,pos_to_del,1)
+        fake_pos_tmp = np.delete(fake_pos_tmp,pos_to_del,0)
 
-        fake_pi, fake_windows_pi, fake_n_bases_pi, fake_counts_pi = allel.windowed_diversity(fake_pos_sorted[aln,0,:].astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
-        fake_theta, fake_windows_theta, fake_n_bases_theta, fake_counts_theta = allel.windowed_watterson_theta(fake_pos_sorted[aln,0,:].astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
-        fake_tajD, fake_windows_tajD, fake_counts_tajD = allel.windowed_tajima_d(fake_pos_sorted[aln,0,:].astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
-        fake_omega, fake_windows_omega, fake_counts_omega = calc_windowed_omega(fake_sites[aln,:,:].astype(int), fake_pos_sorted[aln,0,:].astype(int), 3000, start=1, stop=10001, step=500)
+        fake_ac = allel.HaplotypeArray(np.transpose(fake_sites_tmp).astype(int)).count_alleles()
+        in_ac = allel.HaplotypeArray(np.transpose(input_sites[aln,:,:]).astype(int)).count_alleles()
+
+        fake_pi, fake_windows_pi, fake_n_bases_pi, fake_counts_pi = allel.windowed_diversity(fake_pos_tmp.astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
+        fake_theta, fake_windows_theta, fake_n_bases_theta, fake_counts_theta = allel.windowed_watterson_theta(fake_pos_tmp.astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
+        fake_tajD, fake_windows_tajD, fake_counts_tajD = allel.windowed_tajima_d(fake_pos_tmp.astype(int), fake_ac, size=500, start=1, stop=10001,step=500)
+        fake_omega, fake_windows_omega, fake_counts_omega = calc_windowed_omega(fake_sites_tmp.astype(int), fake_pos_tmp.astype(int), 3000, start=1, stop=10001, step=500)
         
         in_pi, in_windows_pi, in_n_bases_pi, in_counts_pi = allel.windowed_diversity(input_pos_sorted[aln,0,:].astype(int), in_ac, size=500, start=1, stop=10001,step=500)
         in_theta, in_windows_theta, in_n_bases_theta, in_counts_theta = allel.windowed_watterson_theta(input_pos_sorted[aln,0,:].astype(int), in_ac, size=500, start=1, stop=10001,step=500)
@@ -1060,35 +1029,46 @@ def plot_windowed_stats_paneled(fake_sites, fake_pos, in_sites, in_pos, curr_epo
 
     pl_idx = np.cumsum(fake_n_bases_pi)
 
-    fig, ax1 = plt.subplots(nrows=2, ncols=2, figsize = (20, 20))
-
-    ax1[0,0].errorbar(pl_idx / pl_idx[-1], in_pi_array_mean, yerr=in_pi_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[0,0].errorbar(pl_idx / pl_idx[-1] + 0.01, fake_pi_array_mean, yerr=fake_pi_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[0,0].set_xlabel("Position", fontsize=16)
-    ax1[0,0].set_ylabel(r"Nucleotide Diversity ($\pi$)", fontsize=16)
-    ax1[0,0].legend()
-
-    ax1[0,1].errorbar(pl_idx / pl_idx[-1], in_theta_array_mean, yerr=in_theta_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[0,1].errorbar(pl_idx / pl_idx[-1] + 0.01, fake_theta_array_mean, yerr=fake_theta_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[0,1].set_xlabel("Position", fontsize=16)
-    ax1[0,1].set_ylabel(r"Watterson's Theta ($\theta$)", fontsize=16)
-
-
-    ax1[1,0].errorbar(pl_idx / pl_idx[-1], in_tajD_array_mean, yerr=in_tajD_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[1,0].errorbar(pl_idx / pl_idx[-1] + 0.01, fake_tajD_array_mean, yerr=fake_tajD_array_sd, color="#29AF7FFF", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[1,0].set_xlabel("Position", fontsize=16)
-    ax1[1,0].set_ylabel("Tajima's D", fontsize=16)
-
-    ax1[1,1].errorbar((fake_windows_omega[:,0]+((fake_windows_omega[:,1] - fake_windows_omega[:,0])/2))/fake_windows_omega[-1,1], in_omega_array_mean, yerr=in_omega_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[1,1].errorbar((fake_windows_omega[:,0]+((fake_windows_omega[:,1] - fake_windows_omega[:,0])/2))/fake_windows_omega[-1,1] + 0.01, fake_omega_array_mean, yerr=fake_omega_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
-    ax1[1,1].set_xlabel("Position", fontsize=16)
-    ax1[1,1].set_ylabel(r"Kim and Nielsen's $\omega$", fontsize=16)
-
-    fig.suptitle('Windowed Diversity Statistics', fontsize=32)
-    fig.set_size_inches(20, 20)
+    fig, ax1 = plt.subplots()
+    ax1.errorbar(pl_idx / pl_idx[-1], in_pi_array_mean, yerr=in_pi_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.errorbar(pl_idx / pl_idx[-1] + 0.01, fake_pi_array_mean, yerr=fake_pi_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.set_xlabel("Position")
+    ax1.set_ylabel(r"Nucleotide Diversity ($\pi$)")
+    ax1.legend()
+    fig.set_size_inches(10, 10)
     fig.set_dpi(500)
-    plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + "_windowed_stats_panel.png"), bbox_inches="tight", pad_inches=0.5)
-    plt.savefig(os.path.join(odir, str(curr_epoch) + "/" + str(curr_epoch) + "_windowed_stats_panel.svg"), bbox_inches="tight", pad_inches=0.5, format='svg')
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_pi.png"))
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_pi.svg"))
+
+    fig, ax1 = plt.subplots()
+    ax1.errorbar(pl_idx / pl_idx[-1], in_theta_array_mean, yerr=in_theta_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.errorbar(pl_idx / pl_idx[-1] + 0.01, fake_theta_array_mean, yerr=fake_theta_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.set_xlabel("Position")
+    ax1.set_ylabel(r"Watterson's Theta ($\theta$)")
+    fig.set_size_inches(10, 10)
+    fig.set_dpi(500)
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_theta.png"))
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_theta.svg"))
+
+    fig, ax1 = plt.subplots()
+    ax1.errorbar(pl_idx / pl_idx[-1], in_tajD_array_mean, yerr=in_tajD_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.errorbar(pl_idx / pl_idx[-1] + 0.01, fake_tajD_array_mean, yerr=fake_tajD_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.set_xlabel("Position")
+    ax1.set_ylabel("Tajima's D")
+    fig.set_size_inches(10, 10)
+    fig.set_dpi(500)
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_tajd.png"))
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_tajd.svg"))
+
+    fig, ax1 = plt.subplots()
+    ax1.errorbar((fake_windows_omega[:,0]+((fake_windows_omega[:,1] - fake_windows_omega[:,0])/2))/fake_windows_omega[-1,1], in_omega_array_mean, yerr=in_omega_array_sd, color="#440154FF", label="Input", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.errorbar((fake_windows_omega[:,0]+((fake_windows_omega[:,1] - fake_windows_omega[:,0])/2))/fake_windows_omega[-1,1] + 0.01, fake_omega_array_mean, yerr=fake_omega_array_sd, color="#29AF7FFF", label="Generated", linewidth=3, elinewidth=1, capsize=3, capthick=1)
+    ax1.set_xlabel("Position")
+    ax1.set_ylabel(r"Kim and Nielsen's $\omega$")
+    fig.set_size_inches(10, 10)
+    fig.set_dpi(500)
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_omega.png"))
+    plt.savefig(os.path.join(odir, str(curr_epoch) + "_windowed_omega.svg"))
 
     plt.close(fig)
 
